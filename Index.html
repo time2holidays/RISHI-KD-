@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title>Friends Circle Expense Record</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f7fb;color:#222}
+  button,input,select,textarea{font:inherit}
+  .app{max-width:1100px;margin:auto;min-height:100vh;background:#fff}
+  header{background:#2563eb;color:#fff;padding:18px 16px;position:sticky;top:0;z-index:10}
+  header h1{margin:0;font-size:21px}
+  header p{margin:5px 0 0;font-size:13px;opacity:.9}
+  nav{display:flex;gap:8px;padding:10px;background:#fff;border-bottom:1px solid #ddd;position:sticky;top:75px;z-index:9}
+  nav button{flex:1;border:1px solid #d5dbe5;background:#fff;border-radius:8px;padding:11px 8px;cursor:pointer}
+  nav button.active{background:#2563eb;color:#fff;border-color:#2563eb}
+  main{padding:14px}
+  .page{display:none}.page.active{display:block}
+  .card{border:1px solid #e0e5ec;border-radius:10px;padding:14px;margin-bottom:14px;background:#fff}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
+  input,select,textarea{width:100%;border:1px solid #cfd6e1;border-radius:7px;padding:10px;background:#fff}
+  textarea{min-height:75px;resize:vertical}
+  .full{grid-column:1/-1}
+  .buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .btn{border:0;border-radius:7px;padding:10px 14px;cursor:pointer}
+  .primary{background:#2563eb;color:white}.secondary{background:#e8edf5}.danger{background:#dc2626;color:white}
+  .muted{color:#667085;font-size:13px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .stat{border:1px solid #e0e5ec;border-radius:9px;padding:13px;background:#f9fafc}
+  .stat .value{font-size:22px;font-weight:700;margin-top:5px}
+  .table-wrap{overflow:auto;border:1px solid #ddd;border-radius:8px}
+  table{border-collapse:collapse;width:100%;min-width:650px}
+  th,td{border:1px solid #ddd;padding:9px;text-align:left;font-size:13px;white-space:nowrap}
+  th{background:#f0f3f8}
+  td.desc{white-space:normal;min-width:180px}
+  .person-total{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:10px 3px}
+  .person-total:last-child{border-bottom:0}
+  .empty{text-align:center;padding:25px;color:#777}
+  .setup{background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12}
+  .status{font-size:13px;margin-top:8px}
+  .hidden{display:none!important}
+  .small{font-size:12px}
+  @media(max-width:650px){
+    header{padding:14px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr 1fr}
+    .stat{padding:9px}.stat .value{font-size:17px}
+    main{padding:10px}nav{top:68px}
+    .buttons .btn{flex:1}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>Friends Circle Expense Record</h1>
+  <p>Simple shared expense tracker</p>
+</header>
+
+<nav>
+  <button id="navEntry" class="active" onclick="showPage('entry')">➕ Add Expense</button>
+  <button id="navPeople" onclick="showPage('people')">👥 People</button>
+  <button id="navReport" onclick="showPage('report')">📊 Report</button>
+  <button id="navMonthly" onclick="showPage('monthly')">📅 Monthly</button>
+</nav>
+
+<main>
+
+<section id="people" class="page">
+  <div class="card">
+    <h2 style="margin:0 0 14px;font-size:18px">Manage People</h2>
+    <div class="grid">
+      <div>
+        <label>Person Name</label>
+        <input type="text" id="newPersonName" placeholder="Enter person name">
+      </div>
+    </div>
+    <div class="buttons">
+      <button class="btn primary" onclick="addPerson()">Add Person</button>
+    </div>
+    <div id="personStatus" class="status"></div>
+    <div class="small muted" style="margin-top:8px">
+      Add each friend here once. Their name will then appear in the Expense Person dropdown.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">People List</h3>
+    <div id="peopleList"></div>
+  </div>
+</section>
+
+<section id="entry" class="page active">
+  <div class="card">
+    <h2 id="formTitle" style="margin:0 0 14px;font-size:18px">Add Expense</h2>
+    <div class="grid">
+      <div>
+        <label>Date</label>
+        <input type="date" id="expenseDate">
+      </div>
+      <div>
+        <label>Person</label>
+        <select id="person">
+          <option value="">Select person</option>
+        </select>
+      </div>
+      <div>
+        <label>Amount (£)</label>
+        <input type="number" id="amount" min="0" step="0.01" placeholder="0.00" inputmode="decimal">
+      </div>
+      <div class="full">
+        <label>Description</label>
+        <textarea id="description" placeholder="What was the expense for?"></textarea>
+      </div>
+    </div>
+    <div class="buttons">
+      <button class="btn primary" onclick="saveExpense()">Save Expense</button>
+      <button class="btn secondary hidden" id="cancelEdit" onclick="cancelEdit()">Cancel Edit</button>
+    </div>
+    <div id="status" class="status"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Recent Expenses</h3>
+    <div class="grid">
+      <div>
+        <label>Search</label>
+        <input id="entrySearch" oninput="renderRecent()" placeholder="Person or description">
+      </div>
+      <div>
+        <label>Person Filter</label>
+        <select id="entryPersonFilter" onchange="renderRecent()"><option value="">All people</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Person</th><th>Amount</th><th>Description</th><th>Actions</th></tr></thead>
+        <tbody id="recentBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+<section id="monthly" class="page">
+  <div class="card">
+    <h2 style="margin:0 0 14px;font-size:18px">Monthly Expense Report</h2>
+    <div class="grid">
+      <div>
+        <label>Month</label>
+        <input type="month" id="reportMonth" onchange="renderMonthlyReport()">
+      </div>
+      <div>
+        <label>Person</label>
+        <select id="monthlyPerson" onchange="renderMonthlyReport()">
+          <option value="">All people</option>
+        </select>
+      </div>
+    </div>
+    <div class="buttons">
+      <button class="btn secondary" onclick="clearMonthlyFilter()">Clear</button>
+      <button class="btn primary" onclick="exportMonthlyCSV()">Export Monthly Report</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="muted">Month Total</div><div class="value" id="monthlyTotal">£0.00</div></div>
+    <div class="stat"><div class="muted">Records</div><div class="value" id="monthlyRecords">0</div></div>
+    <div class="stat"><div class="muted">People</div><div class="value" id="monthlyPeople">0</div></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3 style="margin-top:0">Monthly Total by Person</h3>
+    <div id="monthlyPersonTotals"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Monthly Expense Details</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Person</th><th>Amount</th><th>Description</th></tr></thead>
+        <tbody id="monthlyBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="report" class="page">
+  <div class="card">
+    <h2 style="margin:0 0 14px;font-size:18px">Expense Report</h2>
+    <div class="grid">
+      <div><label>From Date</label><input type="date" id="fromDate" onchange="renderReport()"></div>
+      <div><label>To Date</label><input type="date" id="toDate" onchange="renderReport()"></div>
+      <div><label>Person</label><select id="reportPerson" onchange="renderReport()"><option value="">All people</option></select></div>
+      <div><label>Search Description</label><input id="reportSearch" oninput="renderReport()" placeholder="Search"></div>
+    </div>
+    <div class="buttons">
+      <button class="btn secondary" onclick="clearReportFilters()">Clear Filters</button>
+      <button class="btn primary" onclick="exportCSV()">Export CSV / Excel</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="muted">Total Expense</div><div class="value" id="totalAmount">£0.00</div></div>
+    <div class="stat"><div class="muted">Records</div><div class="value" id="totalRecords">0</div></div>
+    <div class="stat"><div class="muted">People</div><div class="value" id="totalPeople">0</div></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3 style="margin-top:0">Total by Person</h3>
+    <div id="personTotals"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Expense Details</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Person</th><th>Amount</th><th>Description</th><th>Action</th></tr></thead>
+        <tbody id="reportBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div class="card setup">
+  <strong>Database mode:</strong> This file works immediately using the browser's local IndexedDB database.
+  <div class="small" style="margin-top:6px">
+    For a genuinely shared live database across different phones, connect this same HTML file to Firebase Firestore.
+    See the setup note below in the source code.
+  </div>
+</div>
+</main>
+</div>
+
+<script>
+/*
+==========================================================
+FRIENDS CIRCLE EXPENSE RECORD
+Single-file mobile expense system.
+
+CURRENT MODE:
+- Uses IndexedDB in the browser.
+- People are maintained in a separate People list; expense entry uses a fixed dropdown.
+- A person cannot be deleted once used by an expense record.
+- Data is stored on the device/browser.
+- No server or login is required.
+
+LIVE SHARED MODE:
+To make the same records visible on Android + iPhone + computers,
+replace the database functions below with Firebase Firestore.
+Recommended hosting: GitHub Pages (HTTPS).
+
+IMPORTANT:
+Do not put private passwords/API secrets into this HTML.
+Firebase web configuration is normally client-side, but Firestore
+Security Rules must be configured correctly.
+==========================================================
+*/
+
+const DB_NAME = "friends_circle_expense_db";
+const STORE = "expenses";
+let db;
+let editingId = null;
+let expenses = [];
+
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(DB_NAME,3);
+    req.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains(STORE)){
+        const st=d.createObjectStore(STORE,{keyPath:"id",autoIncrement:true});
+        st.createIndex("date","date");
+        st.createIndex("person","person");
+      }
+      if(!d.objectStoreNames.contains("people")){
+        const ps=d.createObjectStore("people",{keyPath:"id",autoIncrement:true});
+        ps.createIndex("name","name",{unique:true});
+      }
+    };
+    req.onsuccess=e=>{db=e.target.result;resolve(db)};
+    req.onerror=()=>reject(req.error);
+  });
+}
+function getAllExpenses(){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE,"readonly");
+    const req=tx.objectStore(STORE).getAll();
+    req.onsuccess=()=>resolve(req.result||[]);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+function getAllPeople(){
+  return new Promise((resolve,reject)=>{
+    try{
+      const tx=db.transaction(["people"],"readonly");
+      const req=tx.objectStore("people").getAll();
+      req.onsuccess=()=>resolve(req.result||[]);
+      req.onerror=()=>reject(req.error);
+      tx.onerror=()=>reject(tx.error);
+    }catch(e){reject(e)}
+  });
+}
+function addPersonRecord(name){
+  return new Promise((resolve,reject)=>{
+    try{
+      const tx=db.transaction(["people"],"readwrite");
+      const req=tx.objectStore("people").add({name:name,createdAt:new Date().toISOString()});
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>reject(req.error);
+      tx.onerror=()=>reject(tx.error);
+    }catch(e){reject(e)}
+  });
+}
+function deletePersonRecord(id){
+  return new Promise((resolve,reject)=>{
+    try{
+      const tx=db.transaction(["people"],"readwrite");
+      const req=tx.objectStore("people").delete(id);
+      req.onsuccess=()=>resolve();
+      req.onerror=()=>reject(req.error);
+      tx.onerror=()=>reject(tx.error);
+    }catch(e){reject(e)}
+  });
+}
+async function addPerson(){
+  const input=document.getElementById("newPersonName");
+  const status=document.getElementById("personStatus");
+  const name=input.value.trim().replace(/\s+/g," ");
+  if(!name){
+    status.textContent="Please enter a person name.";
+    status.style.color="#b91c1c";
+    input.focus();
+    return;
+  }
+  if(name.length>80){
+    status.textContent="Person name is too long.";
+    status.style.color="#b91c1c";
+    return;
+  }
+  try{
+    await addPersonRecord(name);
+    input.value="";
+    status.textContent="✓ Person added successfully: "+name;
+    status.style.color="#15803d";
+    await refreshPeople();
+    document.getElementById("person").value=name;
+    setTimeout(()=>status.textContent="",3000);
+  }catch(e){
+    console.error("Add person error:",e);
+    if(e && (e.name==="ConstraintError" || e.code===0)){
+      status.textContent="This person already exists.";
+    }else{
+      status.textContent="Unable to add person. Please close/reopen the page and try again.";
+    }
+    status.style.color="#b91c1c";
+  }
+}
+async function removePerson(id){
+  const people=await getAllPeople();
+  const person=people.find(p=>p.id===id);
+  if(!person)return;
+  const used=expenses.some(x=>x.person===person.name);
+  if(used){
+    alert("This person has expense records and cannot be deleted. Keep the person to preserve the records.");
+    return;
+  }
+  if(!confirm("Delete "+person.name+" from the people list?"))return;
+  await deletePersonRecord(id);
+  await refreshPeople();
+}
+async function refreshPeople(){
+  const people=(await getAllPeople()).sort((a,b)=>a.name.localeCompare(b.name));
+  const select=document.getElementById("person");
+  const old=select.value;
+  select.innerHTML='<option value="">Select person</option>'+
+    people.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join("");
+  if(people.some(p=>p.name===old))select.value=old;
+
+  const list=document.getElementById("peopleList");
+  list.innerHTML=people.length
+    ? people.map(p=>`<div class="person-total"><span>${esc(p.name)}</span><button class="btn danger" onclick="removePerson(${p.id})">Delete</button></div>`).join("")
+    : '<div class="empty">No people added yet.</div>';
+}
+function addExpenseRecord(record){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE,"readwrite");
+    const req=tx.objectStore(STORE).add(record);
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+function updateExpenseRecord(record){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE,"readwrite");
+    const req=tx.objectStore(STORE).put(record);
+    req.onsuccess=()=>resolve();
+    req.onerror=()=>reject(req.error);
+  });
+}
+function deleteExpenseRecord(id){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE,"readwrite");
+    const req=tx.objectStore(STORE).delete(id);
+    req.onsuccess=()=>resolve();
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function refresh(){
+  expenses=await getAllExpenses();
+  expenses.sort((a,b)=>String(b.date).localeCompare(String(a.date)) || b.id-a.id);
+  updatePersonFilters();
+  renderRecent();
+  renderReport();
+}
+
+function showPage(page){
+  document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
+  document.getElementById(page).classList.add("active");
+  document.getElementById("navEntry").classList.toggle("active",page==="entry");
+  document.getElementById("navPeople").classList.toggle("active",page==="people");
+  document.getElementById("navReport").classList.toggle("active",page==="report");
+  document.getElementById("navMonthly").classList.toggle("active",page==="monthly");
+  if(page==="people") refreshPeople();
+  if(page==="monthly") renderMonthlyReport();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function today(){
+  const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+function setStatus(msg,good=true){
+  const el=document.getElementById("status");
+  el.textContent=msg;
+  el.style.color=good?"#15803d":"#b91c1c";
+  setTimeout(()=>{if(el.textContent===msg)el.textContent=""},2500);
+}
+
+async function saveExpense(){
+  const date=document.getElementById("expenseDate").value;
+  const person=document.getElementById("person").value.trim();
+  const amount=parseFloat(document.getElementById("amount").value);
+  const description=document.getElementById("description").value.trim();
+
+  if(!date){setStatus("Please select a date.",false);return}
+  if(!person){setStatus("Please enter the person's name.",false);return}
+  if(!Number.isFinite(amount) || amount<0){setStatus("Please enter a valid amount.",false);return}
+
+  const record={date,person,amount,description,updatedAt:new Date().toISOString()};
+  try{
+    if(editingId!==null){
+      record.id=editingId;
+      await updateExpenseRecord(record);
+      setStatus("Expense updated.");
+    }else{
+      record.createdAt=new Date().toISOString();
+      await addExpenseRecord(record);
+      setStatus("Expense saved.");
+    }
+    resetForm();
+    await refresh();
+  }catch(e){
+    console.error(e);setStatus("Could not save the expense.",false);
+  }
+}
+
+function resetForm(){
+  editingId=null;
+  document.getElementById("formTitle").textContent="Add Expense";
+  document.getElementById("expenseDate").value=today();
+    document.getElementById("reportMonth").value=today().slice(0,7);
+  document.getElementById("person").value="";
+  document.getElementById("amount").value="";
+  document.getElementById("description").value="";
+  document.getElementById("cancelEdit").classList.add("hidden");
+}
+
+function editExpense(id){
+  const x=expenses.find(e=>e.id===id); if(!x)return;
+  editingId=id;
+  document.getElementById("formTitle").textContent="Edit Expense";
+  document.getElementById("expenseDate").value=x.date;
+  document.getElementById("person").value=x.person;
+  document.getElementById("amount").value=x.amount;
+  document.getElementById("description").value=x.description||"";
+  document.getElementById("cancelEdit").classList.remove("hidden");
+  showPage("entry");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function cancelEdit(){resetForm()}
+
+async function removeExpense(id){
+  const x=expenses.find(e=>e.id===id);
+  if(!x)return;
+  if(!confirm("Delete this expense record?"))return;
+  await deleteExpenseRecord(id);
+  if(editingId===id)resetForm();
+  await refresh();
+}
+
+function money(n){return "£"+Number(n||0).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function esc(s){
+  return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function formatDate(s){
+  if(!s)return "";
+  const p=s.split("-");
+  return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s;
+}
+
+function updatePersonFilters(){
+  const people=[...new Set(expenses.map(x=>x.person).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  ["entryPersonFilter","reportPerson","monthlyPerson"].forEach(id=>{
+    const el=document.getElementById(id);
+    const old=el.value;
+    el.innerHTML='<option value="">All people</option>'+people.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join("");
+    if(people.includes(old))el.value=old;
+  });
+}
+
+function renderRecent(){
+  const search=document.getElementById("entrySearch").value.trim().toLowerCase();
+  const person=document.getElementById("entryPersonFilter").value;
+  const rows=expenses.filter(x=>{
+    const text=(x.person+" "+(x.description||"")).toLowerCase();
+    return (!search||text.includes(search)) && (!person||x.person===person);
+  }).slice(0,100);
+  const body=document.getElementById("recentBody");
+  if(!rows.length){body.innerHTML='<tr><td colspan="5" class="empty">No expense records found.</td></tr>';return}
+  body.innerHTML=rows.map(x=>`
+    <tr>
+      <td>${formatDate(x.date)}</td>
+      <td>${esc(x.person)}</td>
+      <td>${money(x.amount)}</td>
+      <td class="desc">${esc(x.description||"")}</td>
+      <td><button class="btn secondary" onclick="editExpense(${x.id})">Edit</button>
+      <button class="btn danger" onclick="removeExpense(${x.id})">Delete</button></td>
+    </tr>`).join("");
+}
+
+function getReportRows(){
+  const from=document.getElementById("fromDate").value;
+  const to=document.getElementById("toDate").value;
+  const person=document.getElementById("reportPerson").value;
+  const search=document.getElementById("reportSearch").value.trim().toLowerCase();
+  return expenses.filter(x=>{
+    return (!from||x.date>=from)&&(!to||x.date<=to)&&
+      (!person||x.person===person)&&
+      (!search||(x.description||"").toLowerCase().includes(search));
+  });
+}
+
+function renderReport(){
+  const rows=getReportRows();
+  const total=rows.reduce((s,x)=>s+Number(x.amount||0),0);
+  const people=[...new Set(rows.map(x=>x.person))];
+  document.getElementById("totalAmount").textContent=money(total);
+  document.getElementById("totalRecords").textContent=rows.length;
+  document.getElementById("totalPeople").textContent=people.length;
+
+  const totals={};
+  rows.forEach(x=>totals[x.person]=(totals[x.person]||0)+Number(x.amount||0));
+  const sorted=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+  document.getElementById("personTotals").innerHTML=sorted.length
+    ? sorted.map(([p,v])=>`<div class="person-total"><span>${esc(p)}</span><strong>${money(v)}</strong></div>`).join("")
+    : '<div class="empty">No records for the selected filters.</div>';
+
+  document.getElementById("reportBody").innerHTML=rows.length
+    ? rows.map(x=>`<tr><td>${formatDate(x.date)}</td><td>${esc(x.person)}</td><td>${money(x.amount)}</td><td class="desc">${esc(x.description||"")}</td><td><button class="btn secondary" onclick="editExpense(${x.id})">Edit</button></td></tr>`).join("")
+    : '<tr><td colspan="5" class="empty">No records found.</td></tr>';
+}
+
+function clearReportFilters(){
+  document.getElementById("fromDate").value="";
+  document.getElementById("toDate").value="";
+  document.getElementById("reportPerson").value="";
+  document.getElementById("reportSearch").value="";
+  renderReport();
+}
+
+function csvCell(v){
+  return '"'+String(v??"").replace(/"/g,'""')+'"';
+}
+
+function getMonthlyRows(){
+  const month=document.getElementById("reportMonth").value;
+  const person=document.getElementById("monthlyPerson").value;
+  return expenses.filter(x=>{
+    return (!month || String(x.date).startsWith(month)) &&
+           (!person || x.person===person);
+  });
+}
+
+function renderMonthlyReport(){
+  const rows=getMonthlyRows();
+  const total=rows.reduce((sum,x)=>sum+Number(x.amount||0),0);
+  const people=[...new Set(rows.map(x=>x.person).filter(Boolean))];
+
+  document.getElementById("monthlyTotal").textContent=money(total);
+  document.getElementById("monthlyRecords").textContent=rows.length;
+  document.getElementById("monthlyPeople").textContent=people.length;
+
+  const totals={};
+  rows.forEach(x=>totals[x.person]=(totals[x.person]||0)+Number(x.amount||0));
+  const sorted=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+
+  document.getElementById("monthlyPersonTotals").innerHTML=sorted.length
+    ? sorted.map(([person,total])=>
+        `<div class="person-total"><span>${esc(person)}</span><strong>${money(total)}</strong></div>`
+      ).join("")
+    : '<div class="empty">No expenses for this month.</div>';
+
+  document.getElementById("monthlyBody").innerHTML=rows.length
+    ? rows.map(x=>
+        `<tr><td>${formatDate(x.date)}</td><td>${esc(x.person)}</td><td>${money(x.amount)}</td><td class="desc">${esc(x.description||"")}</td></tr>`
+      ).join("")
+    : '<tr><td colspan="4" class="empty">No expenses found.</td></tr>';
+}
+
+function clearMonthlyFilter(){
+  document.getElementById("reportMonth").value="";
+  document.getElementById("monthlyPerson").value="";
+  renderMonthlyReport();
+}
+
+function exportMonthlyCSV(){
+  const rows=getMonthlyRows();
+  if(!rows.length){alert("There are no monthly records to export.");return}
+  const totals={};
+  rows.forEach(x=>totals[x.person]=(totals[x.person]||0)+Number(x.amount||0));
+
+  const lines=[
+    ["MONTHLY EXPENSE REPORT","","",""],
+    ["Date","Person","Amount","Description"],
+    ...rows.map(x=>[x.date,x.person,Number(x.amount||0).toFixed(2),x.description||""]),
+    ["","","",""],
+    ["TOTAL BY PERSON","","",""],
+    ["Person","Total","",""],
+    ...Object.entries(totals).sort((a,b)=>b[1]-a[1]).map(([p,v])=>[p,v.toFixed(2),"",""]),
+    ["Grand Total",rows.reduce((a,x)=>a+Number(x.amount||0),0).toFixed(2),"",""]
+  ];
+  const csv="\uFEFF"+lines.map(r=>r.map(csvCell).join(",")).join("\r\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="friends-circle-monthly-expense-report.csv";
+  document.body.appendChild(a);a.click();a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportCSV(){
+  const rows=getReportRows();
+  if(!rows.length){alert("There are no records to export.");return}
+  const lines=[
+    ["Date","Person","Amount","Description"],
+    ...rows.map(x=>[x.date,x.person,Number(x.amount||0).toFixed(2),x.description||""])
+  ];
+  const csv="\uFEFF"+lines.map(r=>r.map(csvCell).join(",")).join("\r\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download="friends-circle-expense-report.csv";
+  document.body.appendChild(a);a.click();a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function init(){
+  try{
+    await openDB();
+    await refreshPeople();
+    document.getElementById("expenseDate").value=today();
+    document.getElementById("reportMonth").value=today().slice(0,7);
+    await refresh();
+  }catch(e){
+    console.error(e);
+    alert("Database could not be opened. Please use Chrome/Safari and make sure browser storage is allowed.");
+  }
+}
+init();
+</script>
+</body>
+</html>
